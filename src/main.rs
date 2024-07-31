@@ -1,0 +1,53 @@
+use actix::{Actor, StreamHandler};
+use actix_cors::Cors;
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web_actors::ws::{self, CloseReason};
+
+//use services;
+mod services;
+mod check_names;
+mod files_utils;
+use services::service_router;
+use files_utils::send_message;
+
+struct FilesWs;
+impl Actor for FilesWs {
+    type Context = ws::WebsocketContext<Self>;
+}
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Text(text)) => {
+                print!("Received a message:\n{}\n", text);
+                if let Err(e) = service_router(text.to_string(), ctx) {
+                    println!("Closing socket because: {}", e.to_string());
+                    ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Error, description: Some(e.to_string()) } ))
+                }
+            }
+            _ => (),
+        }
+    }
+    fn started(&mut self, ctx: &mut Self::Context) {
+        println!("Opened a socket!");
+        send_message("Connected to a worker!".to_string(), ctx);
+    }
+}
+
+async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
+    ws::start(FilesWs {}, &req, stream)
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(move || {
+        let cors = Cors::permissive();
+        App::new().service(
+            web::scope("/ws")
+                .route("/", web::get().to(index))
+        )
+        .wrap(cors)
+    })
+    .bind(("0.0.0.0", 7001))?
+    .run()
+    .await
+}
