@@ -27,6 +27,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
             _ => (),
         }
     }
+
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("Opened a socket!");
         send_message("Connected to a worker!".to_string(), ctx);
@@ -39,15 +40,26 @@ async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, E
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(move || {
+    let ip = "localhost";
+    let port = 7001;
+    let server = HttpServer::new(move || {
         let cors = Cors::permissive();
         App::new().service(
             web::scope("/ws")
                 .route("/", web::get().to(index))
         )
         .wrap(cors)
-    })
-    .bind(("0.0.0.0", 7001))?
-    .run()
-    .await
+    });
+    match server.bind((ip, port)) {
+        Ok(v) => {
+            println!("Hosting at {}:{}", ip, port);
+            v.run().await
+        }
+        Err(e) => { 
+            println!("{}", e.to_string());
+            Err(e)   
+        }
+    }
+
+    /* .run().await */
 }

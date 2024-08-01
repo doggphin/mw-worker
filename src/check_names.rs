@@ -46,9 +46,9 @@ pub enum FinalCheckError {
     IncorrectFileNameClientName(String),
     InvalidFileNameMediaType(String, String),
     InvalidFileNameGroupNumber(String, String),
+    InvalidFileNameTooLong(String),
     IncorrectFileNameGroupNumber(u64, u64, String),
     IncorrectFileNameGroupNumberPrecision(u64, u64, String),
-    IncorrectFileNameTooLong(String),
 }
 impl std::error::Error for FinalCheckError {}
 impl std::fmt::Display for FinalCheckError {
@@ -62,7 +62,7 @@ impl std::fmt::Display for FinalCheckError {
             FinalCheckError::InvalidFileNameGroupNumber(group_number, file_name) => write!(f, "could not convert group number \"{group_number}\" to a number in file \"{file_name}\""),
             FinalCheckError::IncorrectFileNameGroupNumber(file_group_number, expected_group_number, file_name) => write!(f, "file \"{file_name}\" had group number {file_group_number} when it should have had group number {expected_group_number}"),
             FinalCheckError::IncorrectFileNameGroupNumberPrecision(file_group_number_precision, expected_group_number_precision, file_name) => write!(f, "file \"{file_name}\" had the correct group number, but had {file_group_number_precision} digits of precision instead of the expected {expected_group_number_precision}"),
-            FinalCheckError::IncorrectFileNameTooLong(file_name) => write!(f, "file \"{file_name}\" had too many words; should follow format <name>_<media>_<group#>_<index#><_optionalscanmethod>.<extension>")
+            FinalCheckError::InvalidFileNameTooLong(file_name) => write!(f, "file \"{file_name}\" had too many words; should follow format <name>_<media>_<group#>_<index#><_optionalscanmethod>.<extension>")
         }
     }
 }
@@ -113,6 +113,7 @@ fn final_check_entry_name(path: std::path::PathBuf, data: &mut FinalCheckData) -
             }
             3 => {
                 // This can either be a group number OR a group number and the extension
+                // Group number should also be able to be ommited if the project only has one group
                 if val.contains(".") {
                     let values = Vec::from_iter(val.split(".").map(String::from));
                     if let Err(e) = check_index_number(file_name, &*values[0], media_type, data) {
@@ -140,7 +141,7 @@ fn final_check_entry_name(path: std::path::PathBuf, data: &mut FinalCheckData) -
                 return Ok(());
             }
             _ => {
-                return Err(FinalCheckError::IncorrectFileNameTooLong(file_name.to_string()));
+                return Err(FinalCheckError::InvalidFileNameTooLong(file_name.to_string()));
             }
         }
     }
