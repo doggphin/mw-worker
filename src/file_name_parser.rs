@@ -175,12 +175,6 @@ fn word_to_media_type(word: &str, file_name: String) -> Result<MediaType, FileNa
     })
 }
 
-fn word_to_scan_type(word: &str, file_name: String) -> Result<MediaType, FileNameParseError> {
-    Ok(match word {
-
-    })
-}
-
 fn try_get_number(word: &str) -> Option<u32> {
     match word.parse::<u32>() {
         Ok(v) => Some(v),
