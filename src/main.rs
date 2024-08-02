@@ -5,6 +5,8 @@ use actix_web_actors::ws::{self, CloseReason};
 
 //use services;
 mod services;
+mod file_name_parser;
+mod categories;
 mod check_names;
 mod files_utils;
 use services::service_router;

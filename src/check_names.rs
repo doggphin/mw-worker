@@ -6,11 +6,11 @@ use glob::glob;
 
 #[derive(Deserialize, Debug)]
 struct Data {
-    data: FinalCheckData
+    data: FinalCheckRequest
 }
 
 #[derive(Deserialize, Debug)]
-struct FinalCheckData {
+struct FinalCheckRequest {
     first_name: String,
     last_name: String,
     group_number: u64, 
@@ -67,8 +67,12 @@ impl std::fmt::Display for FinalCheckError {
     }
 }
 
+/*fn GetNextSectionType(current_type: SectionType, next_section: String) -> SectionType {
+
+}*/
+
 pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Context) -> std::result::Result<(), FinalCheckError> {
-    let mut data: FinalCheckData = match serde_json::from_value::<Data>(request_json) {
+    let mut data: FinalCheckRequest = match serde_json::from_value::<Data>(request_json) {
         Ok(v) => v.data,
         Err(e) => { return Err(FinalCheckError::InvalidRequestMissingFields(e.to_string())); }
     };
@@ -89,8 +93,11 @@ pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>
     Ok(())
 }
 
-fn final_check_entry_name(path: std::path::PathBuf, data: &mut FinalCheckData) -> Result<(), FinalCheckError> {
+fn final_check_entry_name(path: std::path::PathBuf, data: &mut FinalCheckRequest) -> Result<(), FinalCheckError> {
     // <Last Name><First Name Initial>_<Media Type>_<Group #>_<Index #>_<Scan Type>
+
+
+    /* 
     let file_name = path.file_name().unwrap().to_str().unwrap();
     for (i, val) in file_name.split("_").into_iter().enumerate() {
         let mut media_type = "";
@@ -145,26 +152,26 @@ fn final_check_entry_name(path: std::path::PathBuf, data: &mut FinalCheckData) -
             }
         }
     }
+    */
 
     Ok(())
 }
 
 
-fn check_client_name(file_name: &str, client_name: &str, data: &FinalCheckData) -> Result<(), FinalCheckError> {
+fn check_client_name(file_name: &str, client_name: &str, data: &FinalCheckRequest) -> Result<(), FinalCheckError> {
     let expected_first_name_initial = match data.first_name.chars().nth(0) {
         Some(v) => v,
         None => { return Err(FinalCheckError::InvalidRequestFormatting(format!("invalid first name specified: \"{}\"", data.first_name))); }
     };
     let expected_client_name = format!("{}{}", data.last_name, expected_first_name_initial);
-    if client_name != expected_client_name {
-        return Err(FinalCheckError::IncorrectFileNameClientName(format!("expected \"{}\", found \"{}\" in file \"{}\"", expected_client_name, client_name, file_name)));
+    match client_name != expected_client_name {
+        true => Ok(()),
+        false => Err(FinalCheckError::IncorrectFileNameClientName(format!("expected \"{}\", found \"{}\" in file \"{}\"", expected_client_name, client_name, file_name)))
     }
-
-    Ok(())
 }
 
 
-fn check_media_name(file_name: &str, media_name: &str, data: &mut FinalCheckData) -> Result<(), FinalCheckError> {
+fn check_media_name(file_name: &str, media_name: &str, data: &mut FinalCheckRequest) -> Result<(), FinalCheckError> {
     match media_name {
         "Slides" | "Prints" | "Negatives" => Ok(()),
         _ => return Err(FinalCheckError::InvalidFileNameMediaType(media_name.to_string(), file_name.to_string()))
@@ -172,7 +179,7 @@ fn check_media_name(file_name: &str, media_name: &str, data: &mut FinalCheckData
 }
 
 
-fn check_group_number(file_name: &str, group_number: &str, data: &FinalCheckData) -> Result<(), FinalCheckError> {
+fn check_group_number(file_name: &str, group_number: &str, data: &FinalCheckRequest) -> Result<(), FinalCheckError> {
     let group_number_u64 = match group_number.parse::<u64>() {
         Ok(v) => v,
         _ => return Err(FinalCheckError::InvalidFileNameGroupNumber(group_number.to_string(), file_name.to_string()))
@@ -181,23 +188,23 @@ fn check_group_number(file_name: &str, group_number: &str, data: &FinalCheckData
         return Err(FinalCheckError::IncorrectFileNameGroupNumber(group_number_u64, data.group_number, file_name.to_string()))
     }
     let group_number_digits: u64 = u64::try_from(group_number.len()).unwrap();
-    if data.group_number_precision.is_some() && group_number_digits != data.group_number_precision.unwrap() {
-        return Err(FinalCheckError::IncorrectFileNameGroupNumberPrecision(group_number_digits, data.group_number_precision.unwrap(), file_name.to_string()))
+    match data.group_number_precision.is_some() && group_number_digits != data.group_number_precision.unwrap() {
+        true => Err(FinalCheckError::IncorrectFileNameGroupNumberPrecision(group_number_digits, data.group_number_precision.unwrap(), file_name.to_string())),
+        false => Ok(())
     }
+}
+
+
+fn check_index_number(file_name: &str, index_number: &str, media_type: &str, data: &mut FinalCheckRequest) -> Result<(), FinalCheckError> {
     Ok(())
 }
 
 
-fn check_index_number(file_name: &str, index_number: &str, media_type: &str, data: &mut FinalCheckData) -> Result<(), FinalCheckError> {
+fn check_extension(file_name: &str, extension: &str, media_type: &str, data: &mut FinalCheckRequest) -> Result<(), FinalCheckError> {
     Ok(())
 }
 
 
-fn check_extension(file_name: &str, extension: &str, media_type: &str, data: &mut FinalCheckData) -> Result<(), FinalCheckError> {
-    Ok(())
-}
-
-
-fn check_scan_type(file_name: &str, index_number: &str, media_type: &str, data: &mut FinalCheckData) -> Result<(), FinalCheckError> {
+fn check_scan_type(file_name: &str, index_number: &str, media_type: &str, data: &mut FinalCheckRequest) -> Result<(), FinalCheckError> {
     Ok(())
 }
