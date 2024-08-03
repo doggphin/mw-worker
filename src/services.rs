@@ -1,11 +1,10 @@
-use actix_web_actors::ws;
 use actix::Actor;
 use serde::Deserialize;
 use serde_json::Value;
-use std::error::Error;
 use crate::FilesWs;
 
-use crate::check_names::final_check;
+use crate::files_utils::{send_message, send_status};
+use crate::final_checker::final_check;
 
 pub struct JobRequest {
     job: String,
@@ -26,7 +25,7 @@ struct ServiceRequest {
 pub enum ServicesError {
     CouldNotParseRequest(String),
     InvalidJob(Option<String>),
-    InvalidCheckNamesRequest(String),
+    InvalidFinalCheck(String),
 }
 impl std::error::Error for ServicesError {}
 impl std::fmt::Display for ServicesError {
@@ -38,7 +37,7 @@ impl std::fmt::Display for ServicesError {
                     Some(v) => write!(f, "Invalid job requested: {}", v),
                     None => write!(f, "Invalid job requested!")
                 },
-            ServicesError::InvalidCheckNamesRequest(msg) => write!(f, "{}", msg)
+            ServicesError::InvalidFinalCheck(msg) => write!(f, "{}", msg)
             
         }
     }
@@ -54,9 +53,21 @@ pub fn service_router(request: String, ctx: &mut<FilesWs as Actor>::Context) -> 
         Err(_) => { return Err(ServicesError::InvalidJob(None)); }
     };
     return match &*job_request.job {
-        "final_check" => match final_check(job_request.dir, json.clone(), ctx) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(ServicesError::InvalidCheckNamesRequest(e.to_string()))
+        "final_check" => {
+            send_status("busy", ctx);
+            send_message("Starting final check!", ctx);
+            match final_check(job_request.dir, json.clone(), ctx) {
+                Ok(_) => {
+                    send_message("Final check successful!", ctx);
+                    send_status("success", ctx);
+                    Ok(())
+                }
+                Err(e) => {
+                    send_message("Final check unsuccessful!", ctx);
+                    send_status("failure", ctx);
+                    Err(ServicesError::InvalidFinalCheck(e.to_string()))
+                }
+            }
         },
         "check_is_corrected" => Ok(()),
         _ => Err(ServicesError::InvalidJob(Some(String::from("Invalid job type specified in request!"))))

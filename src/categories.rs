@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ScanType {
     Error,
     Default,
@@ -19,7 +19,7 @@ impl FromStr for ScanType {
     }
 }
 
-
+#[derive(Debug)]
 pub enum MediaType {
     Error,
     Prints,
@@ -38,7 +38,7 @@ impl FromStr for MediaType {
     }
 }
 
-
+#[derive(Debug)]
 pub enum FileExtension {
     Error,
     Jpg,

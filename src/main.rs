@@ -1,13 +1,12 @@
 use actix::{Actor, StreamHandler};
 use actix_cors::Cors;
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws::{self, CloseReason};
+use actix_web_actors::ws::{self};
 
-//use services;
 mod services;
 mod file_name_parser;
 mod categories;
-mod check_names;
+mod final_checker;
 mod files_utils;
 use services::service_router;
 use files_utils::send_message;
@@ -32,7 +31,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("Opened a socket!");
-        send_message("Connected to a worker!".to_string(), ctx);
+        send_message("Connected to a worker!", ctx);
     }
 }
 
@@ -62,6 +61,4 @@ async fn main() -> std::io::Result<()> {
             Err(e)   
         }
     }
-
-    /* .run().await */
 }

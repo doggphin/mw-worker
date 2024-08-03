@@ -1,7 +1,10 @@
 use actix::Actor;
 use crate::FilesWs;
 
-pub fn send_message(message: String, ctx: &mut<FilesWs as Actor>::Context) -> () {
-    let my_string = format!("{{\"msg\": \"{message}\"}}");
-    ctx.text(my_string);
+pub fn send_message(message: &str, ctx: &mut<FilesWs as Actor>::Context) -> () {
+    ctx.text(format!("{{\"msg\": \"{message}\"}}"));
+}
+
+pub fn send_status(message: &str, ctx: &mut<FilesWs as Actor>::Context) -> () {
+    ctx.text(format!("{{\"status\": \"{message}\"}}"));
 }
