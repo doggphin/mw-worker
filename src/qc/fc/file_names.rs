@@ -1,30 +1,9 @@
 use std::str::FromStr;
 use regex;
-use crate::categories::{ScanType, FileExtension, MediaType};
+use crate::utils::types::{ScanType, FileExtensionType, MediaType};
 
-#[derive(Debug)]
-pub enum FileNameParseError {
-    NameShort(String),
-    UnrecognizedMediaType(String),
-    ExpectedGroupOrIndexNumber(String),
-    NoIndexNumber,
-    InvalidExtension(String),
-    ExpectedEnd(String)
-}
-impl std::error::Error for FileNameParseError {}
-impl std::fmt::Display for FileNameParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter)
-    -> std::fmt::Result {
-        match self {
-            FileNameParseError::NameShort(word) => write!(f, "name \"{word}\" was too short"),
-            FileNameParseError::UnrecognizedMediaType(word) => write!(f, "unrecognized media type \"{word}\""),
-            FileNameParseError::ExpectedGroupOrIndexNumber(word) => write!(f, "unrecognized text \"{word}\" where a group or index number should have been"),
-            FileNameParseError::NoIndexNumber => write!(f, "no index number could be found"),
-            FileNameParseError::InvalidExtension(word) => write!(f, "invalid extension \"{word}\""),
-            FileNameParseError::ExpectedEnd(word) => write!(f, "unexpected additional field \"{word}\"")
-        }
-    }
-}
+mod error;
+use error::FileNameParseError;
 
 #[derive(Debug)]
 pub struct ParsedFileName {
@@ -37,7 +16,7 @@ pub struct ParsedFileName {
     index_number: u32,
     index_number_precision: usize,
     scan_type: ScanType,
-    file_extension: FileExtension,
+    file_extension: FileExtensionType,
 }
 
 #[derive(Debug)]
@@ -64,55 +43,46 @@ impl ParsedFileName {
         let mut index_number: u32 = 0;
         let mut index_number_precision: usize = 0;
         let mut scan_type: ScanType = ScanType::Error;
-        let mut file_extension: FileExtension = FileExtension::Error;
+        let mut file_extension: FileExtensionType = FileExtensionType::Error;
 
         let mut current_section = SectionType::FormattedName;
         for word in re.split(file_name) {
             loop {
                 match current_section {
                     SectionType::FormattedName => {
-                        (last_name, first_name_initial) = match parse_client_name(word, file_name.to_string()) {
-                            Ok(v) => v,
-                            Err(e) => return Err(e)
-                        };
+                        (last_name, first_name_initial) = parse_client_name(word, file_name.to_string())?;
                         current_section = SectionType::MediaType;
                         break;
                     }
                     SectionType::MediaType => {
-                        media_type = match word_to_media_type(word, file_name.to_string()) {
-                            Ok(v) => v,
-                            Err(e) => return Err(e)
-                        };
+                        media_type = word_to_media_type(word, file_name.to_string())?;
                         current_section = SectionType::GroupNumber;
                         break;
                     }
                     // GroupNumber and GroupCharacter could probably be combined
                     SectionType::GroupNumber => {
-                        group_number = match try_get_number(word) {
-                            Some(v) => Some(v),
-                            None => return Err(FileNameParseError::ExpectedGroupOrIndexNumber(word.to_string()))
-                        };
+                        group_number = Some(try_get_number(word).map_err(|_| FileNameParseError::ExpectedGroupOrIndexNumber(word.to_string()))?);
                         group_number_precision = Some(word.len());
                         current_section = SectionType::GroupCharacter;
                         break;
                     }
                     SectionType::GroupCharacter => {
-                        group_character = try_get_char(word);
                         current_section = SectionType::IndexNumber;
-                        // Only go to next iteration if the Group character ended up existing
-                        if group_character.is_some() {
-                            break;
-                        }
-                        // Try reading this word as an index number instead
-                        continue;
+                        match try_get_char(word) {
+                            Ok(v) => {
+                                group_character = Some(v);
+                                break;
+                            }
+                            Err(_) => continue
+                        };
                     }
                     SectionType::IndexNumber => {
                         match try_get_number(word) {
-                            Some(v) => {
+                            Ok(v) => {
                                 index_number = v;
                                 index_number_precision = word.len();
                             }
-                            None => {
+                            Err(_) => {
                                 // If no number is found here, the number we read as the group number was actually supposed to be the index number
                                 if group_character.is_some() {
                                     // Should not be possible to be a non-number here if a group character was read
@@ -141,10 +111,7 @@ impl ParsedFileName {
                         continue;  
                     }
                     SectionType::Extension => {
-                        file_extension = match FileExtension::from_str(word) {
-                            Ok(v) => v,
-                            Err(_) => return Err(FileNameParseError::InvalidExtension(word.to_string()))
-                        };
+                        file_extension = FileExtensionType::from_str(word).map_err(|_| FileNameParseError::InvalidExtension(word.to_string()))?;
                         current_section = SectionType::End;
                         break;
                     }
@@ -172,22 +139,16 @@ fn parse_client_name(word: &str, file_name: String) -> Result<(&str, char), File
 }
 
 fn word_to_media_type(word: &str, file_name: String) -> Result<MediaType, FileNameParseError> {
-    match MediaType::from_str(word) {
-        Ok(v) => Ok(v),
-        _ => Err(FileNameParseError::UnrecognizedMediaType(word.to_string()))
-    }
+    MediaType::from_str(word).map_err(|_| FileNameParseError::UnrecognizedMediaType(word.to_string()))
 }
 
-fn try_get_number(word: &str) -> Option<u32> {
-    match word.parse::<u32>() {
-        Ok(v) => Some(v),
-        Err(_) => None
-    }
+fn try_get_number(word: &str) -> Result<u32, ()> {
+    word.parse::<u32>().map_err(|_| ())
 }
 
-fn try_get_char(word: &str) -> Option<char> {
+fn try_get_char(word: &str) -> Result<char, ()> {
     match word.len() {
-        1 => Some(word.chars().next().unwrap()),
-        _ => None
+        1 => Ok(word.chars().next().unwrap()),
+        _ => Err(())
     }
 }

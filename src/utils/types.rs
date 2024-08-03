@@ -39,17 +39,17 @@ impl FromStr for MediaType {
 }
 
 #[derive(Debug)]
-pub enum FileExtension {
+pub enum FileExtensionType {
     Error,
     Jpg,
     Tiff,
 }
-impl FromStr for FileExtension {
+impl FromStr for FileExtensionType {
     type Err = ();
-    fn from_str(input: &str) -> Result<FileExtension, Self::Err> {
+    fn from_str(input: &str) -> Result<FileExtensionType, Self::Err> {
         match input {
-            "jpg" | "jpeg" => Ok(FileExtension::Jpg),
-            "tif" | "tiff" => Ok(FileExtension::Tiff),
+            "jpg" | "jpeg" => Ok(FileExtensionType::Jpg),
+            "tif" | "tiff" => Ok(FileExtensionType::Tiff),
             _ => Err(())
         }
     }

@@ -3,13 +3,11 @@ use actix_cors::Cors;
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws::{self};
 
-mod services;
-mod file_name_parser;
-mod categories;
-mod final_checker;
-mod files_utils;
-use services::service_router;
-use files_utils::send_message;
+mod handlers;
+use handlers::jobs;
+mod qc;
+mod utils;
+use utils::send_text;
 
 struct FilesWs;
 impl Actor for FilesWs {
@@ -20,7 +18,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
         match msg {
             Ok(ws::Message::Text(text)) => {
                 print!("Received a message:\n{}\n", text);
-                if let Err(e) = service_router(text.to_string(), ctx) {
+                if let Err(e) = jobs::service_router(text.to_string(), ctx) {
                     println!("Closing socket because: {}", e.to_string());
                     ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Error, description: Some(e.to_string()) } ))
                 }
@@ -31,7 +29,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("Opened a socket!");
-        send_message("Connected to a worker!", ctx);
+        send_text::msg("Connected to a worker!", ctx);
     }
 }
 
