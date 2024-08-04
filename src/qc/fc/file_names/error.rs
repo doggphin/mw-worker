@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum FileNameParseError {
     NameShort(String),
+    NotAFile(std::path::PathBuf),
     UnrecognizedMediaType(String),
     ExpectedGroupOrIndexNumber(String),
     NoIndexNumber,
@@ -13,6 +14,7 @@ impl std::fmt::Display for FileNameParseError {
     -> std::fmt::Result {
         match self {
             FileNameParseError::NameShort(word) => write!(f, "name \"{word}\" was too short"),
+            FileNameParseError::NotAFile(path) => write!(f, "path \"{}\" is not a file", path.to_string_lossy()),
             FileNameParseError::UnrecognizedMediaType(word) => write!(f, "unrecognized media type \"{word}\""),
             FileNameParseError::ExpectedGroupOrIndexNumber(word) => write!(f, "unrecognized text \"{word}\" where a group or index number should have been"),
             FileNameParseError::NoIndexNumber => write!(f, "no index number could be found"),

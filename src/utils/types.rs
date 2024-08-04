@@ -21,7 +21,6 @@ impl FromStr for ScanType {
 
 #[derive(Debug)]
 pub enum MediaType {
-    Error,
     Prints,
     Slides,
     Negatives

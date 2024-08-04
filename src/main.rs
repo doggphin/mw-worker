@@ -23,6 +23,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
                     ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Error, description: Some(e.to_string()) } ))
                 }
             }
+            Ok(ws::Message::Close(None)) => {
+                ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Normal, description: None }))
+            }
             _ => (),
         }
     }

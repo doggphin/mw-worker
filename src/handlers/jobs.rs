@@ -1,7 +1,7 @@
 use actix::Actor;
 use serde::Deserialize;
 use serde_json::Value;
-use crate::FilesWs;
+use crate::{qc::fc, utils::send_text, FilesWs};
 
 mod error;
 use error::ServicesError;
@@ -13,7 +13,7 @@ struct ServiceRequest {
 }
 
 pub fn service_router(request: String, ctx: &mut<FilesWs as Actor>::Context) -> Result<(), ServicesError> {
-    let json: Value = match serde_json::from_str(&request).map_err(|e| Err(ServicesError::RequestParseError(e.to_string())))?;
+    let json = serde_json::from_str(&request).map_err(|e| ServicesError::RequestParseError(e.to_string()))?;
     let job_request = parse_base_job(&json).map_err(|_| ServicesError::InvalidJob(None))?;
     return match &*job_request.job {
         "final_check" => {

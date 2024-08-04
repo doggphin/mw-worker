@@ -1,26 +1,28 @@
-use std::str::FromStr;
+use std::{ffi::OsStr, str::FromStr};
 use regex;
 use crate::utils::types::{ScanType, FileExtensionType, MediaType};
 
-mod error;
+pub mod error;
 use error::FileNameParseError;
 
 #[derive(Debug)]
 pub struct ParsedFileName {
-    last_name: String,
-    first_name_initial: char,
-    media_type: MediaType,
-    group_number: Option<u32>,
-    group_number_precision: Option<usize>,
-    group_character: Option<char>,
-    index_number: u32,
-    index_number_precision: usize,
-    scan_type: ScanType,
-    file_extension: FileExtensionType,
+    pub path: std::path::PathBuf,
+    pub raw_file_name: String,
+    pub last_name: String,
+    pub first_name_initial: char,
+    pub media_type: MediaType,
+    pub group_number: Option<u32>,
+    pub group_number_precision: Option<usize>,
+    pub group_character: Option<char>,
+    pub index_number: u32,
+    pub index_number_precision: usize,
+    pub scan_type: ScanType,
+    pub file_extension: FileExtensionType,
 }
 
 #[derive(Debug)]
-enum SectionType {
+enum SectionReadState {
     FormattedName,
     MediaType,
     GroupNumber,
@@ -31,12 +33,17 @@ enum SectionType {
     End
 }
 impl ParsedFileName {
-    pub fn from(file_name: &str) -> Result<ParsedFileName, FileNameParseError> {
+    pub fn from_path(path: &std::path::PathBuf) -> Result<ParsedFileName, FileNameParseError> {
+        if !path.is_file() {
+            return Err(FileNameParseError::NotAFile(path.clone()))
+        }
+        let file_name = &*path.file_name().unwrap_or(OsStr::new("invalid file name")).to_string_lossy().into_owned();
+        println!("{file_name}");
         let re = regex::Regex::new(r"[._]").unwrap();
 
         let mut last_name: &str = "";
         let mut first_name_initial: char = ' ';
-        let mut media_type: MediaType = MediaType::Error;
+        let mut media_type: Option<MediaType> = None;  // Just temporary
         let mut group_number: Option<u32> = None;
         let mut group_number_precision: Option<usize> = None;
         let mut group_character: Option<char> = None;
@@ -45,29 +52,30 @@ impl ParsedFileName {
         let mut scan_type: ScanType = ScanType::Error;
         let mut file_extension: FileExtensionType = FileExtensionType::Error;
 
-        let mut current_section = SectionType::FormattedName;
+        let mut current_section = SectionReadState::FormattedName;
         for word in re.split(file_name) {
             loop {
                 match current_section {
-                    SectionType::FormattedName => {
-                        (last_name, first_name_initial) = parse_client_name(word, file_name.to_string())?;
-                        current_section = SectionType::MediaType;
+                    SectionReadState::FormattedName => {
+                        (last_name, first_name_initial) = parse_client_name(word)?;
+                        current_section = SectionReadState::MediaType;
                         break;
                     }
-                    SectionType::MediaType => {
-                        media_type = word_to_media_type(word, file_name.to_string())?;
-                        current_section = SectionType::GroupNumber;
+                    SectionReadState::MediaType => {
+                        let parsed_media_type = word_to_media_type(word)?;
+                        media_type = Some(parsed_media_type);
+                        current_section = SectionReadState::GroupNumber;
                         break;
                     }
                     // GroupNumber and GroupCharacter could probably be combined
-                    SectionType::GroupNumber => {
+                    SectionReadState::GroupNumber => {
                         group_number = Some(try_get_number(word).map_err(|_| FileNameParseError::ExpectedGroupOrIndexNumber(word.to_string()))?);
                         group_number_precision = Some(word.len());
-                        current_section = SectionType::GroupCharacter;
+                        current_section = SectionReadState::GroupCharacter;
                         break;
                     }
-                    SectionType::GroupCharacter => {
-                        current_section = SectionType::IndexNumber;
+                    SectionReadState::GroupCharacter => {
+                        current_section = SectionReadState::IndexNumber;
                         match try_get_char(word) {
                             Ok(v) => {
                                 group_character = Some(v);
@@ -76,7 +84,7 @@ impl ParsedFileName {
                             Err(_) => continue
                         };
                     }
-                    SectionType::IndexNumber => {
+                    SectionReadState::IndexNumber => {
                         match try_get_number(word) {
                             Ok(v) => {
                                 index_number = v;
@@ -94,15 +102,15 @@ impl ParsedFileName {
                                 group_number_precision = None;
                             }
                         }
-                        current_section = SectionType::ScanType;   
+                        current_section = SectionReadState::ScanType;   
                         break;              
                     }
-                    SectionType::ScanType => { 
+                    SectionReadState::ScanType => { 
                         scan_type = match ScanType::from_str(word) {
                             Ok(v) => v,
                             Err(_) => ScanType::Default
                         };
-                        current_section = SectionType::Extension;
+                        current_section = SectionReadState::Extension;
                         if scan_type != ScanType::Default {
                             // If scan type was read, consume iterator
                             break;
@@ -110,12 +118,12 @@ impl ParsedFileName {
                         // Try reading this word as an extension instead
                         continue;  
                     }
-                    SectionType::Extension => {
+                    SectionReadState::Extension => {
                         file_extension = FileExtensionType::from_str(word).map_err(|_| FileNameParseError::InvalidExtension(word.to_string()))?;
-                        current_section = SectionType::End;
+                        current_section = SectionReadState::End;
                         break;
                     }
-                    SectionType::End => {
+                    SectionReadState::End => {
                         return Err(FileNameParseError::ExpectedEnd(word.to_string()))
                     }
                 }
@@ -123,11 +131,14 @@ impl ParsedFileName {
         }
 
         let last_name = last_name.to_string();
-        Ok(ParsedFileName { last_name, first_name_initial, media_type, group_number, group_number_precision, group_character, index_number, index_number_precision, scan_type, file_extension })
+        let media_type = media_type.unwrap();
+        let path = path.clone();
+        let raw_file_name = file_name.to_string();
+        Ok(ParsedFileName { path, raw_file_name, last_name, first_name_initial, media_type, group_number, group_number_precision, group_character, index_number, index_number_precision, scan_type, file_extension })
     }
 }
 
-fn parse_client_name(word: &str, file_name: String) -> Result<(&str, char), FileNameParseError> {
+fn parse_client_name(word: &str) -> Result<(&str, char), FileNameParseError> {
     let len = word.len();
     if len < 2 {
         return Err(FileNameParseError::NameShort(word.to_string()))
@@ -138,7 +149,7 @@ fn parse_client_name(word: &str, file_name: String) -> Result<(&str, char), File
     Ok((last_name, first_initial))
 }
 
-fn word_to_media_type(word: &str, file_name: String) -> Result<MediaType, FileNameParseError> {
+fn word_to_media_type(word: &str) -> Result<MediaType, FileNameParseError> {
     MediaType::from_str(word).map_err(|_| FileNameParseError::UnrecognizedMediaType(word.to_string()))
 }
 

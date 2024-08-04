@@ -2,7 +2,7 @@ use actix::Actor;
 use serde_json::Value;
 use serde::Deserialize;
 use glob::{glob, Paths};
-use crate::FilesWs;
+use crate::{utils::types::MediaType, FilesWs};
 
 mod file_names;
 mod error;
@@ -32,7 +32,7 @@ struct FinalCheckRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     group_char: Option<char>,
     #[serde(default = "default_2")]
-    group_num_precision: u64,
+    group_num_precision: u64,   // Guaranteed 6 or less
 
     media: MediaGroups
 }
@@ -46,10 +46,17 @@ impl FinalCheckRequest {
 
 pub fn check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Context) -> std::result::Result<(), FCError> {
     let final_check_request = parse_final_check_request(request_json)?;
-    let pattern = format!("{dir}\\*");
-    let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e.to_string(), pattern))?;
+
+    let mut pattern = build_directory_pattern(&dir, &final_check_request)?;
+    
+    let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e))?;
     let parsed_file_names = parse_file_names(files)?;
-    let counted_media = MediaGroups::from_parsed_file_names(parsed_file_names).map_err(|_| FCError::Todo)?;
+    let counted_media = MediaGroups::from_parsed_file_names(&parsed_file_names).map_err(|_| FCError::Todo)?;
+
+    for parsed_file_name in &parsed_file_names {
+        counted_media.check_file_metadata(parsed_file_name);
+    }
+
     final_check_request.is_satisfied_by_media(counted_media)?;
 
     // Check DPI and stuff after
@@ -58,11 +65,34 @@ pub fn check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Cont
 }
 
 
+fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest) -> Result<String, FCError> {
+    let mut ret = format!("{dir}\\");
+
+    if let Some(num) = final_check_request.group_num.and_then(|num| Some(num.to_string())) {
+        let precision_difference: usize = usize::try_from(final_check_request.group_num_precision).unwrap() - num.len();
+        if precision_difference > 0 {
+            let padding = str::repeat("0", precision_difference);
+            ret.push_str(&*format!("{padding}{num}\\"));
+        }
+    }
+
+    ret.push('*');
+    Ok(ret)
+}
+
 fn parse_final_check_request(request_json: Value) -> std::result::Result<FinalCheckRequest, FCError> {
-    let data = serde_json::from_value::<Data>(request_json).map_err(|e| FCError::InvalidRequest(e.to_string()))?;
+    let data = serde_json::from_value::<Data>(request_json).map_err(|e| FCError::DeserializeError(e))?;
     let data = data.data;
     if data.media.slides.is_none() && data.media.negatives.is_none() && data.media.prints.is_none() {
-        return Err(FCError::InvalidRequest(String::from("no properties were defined in expecting_media")));
+        return Err(FCError::InvalidRequest("no properties were defined in expecting_media".to_string()));
+    }
+    if let Some(group_num) = data.group_num {
+        if u64::try_from(group_num.to_string().len()).unwrap() > data.group_num_precision {
+            return Err(FCError::InsufficientGroupNumberPrecision(group_num, data.group_num_precision))
+        }
+    }
+    if data.group_num_precision > 6 {
+        return Err(FCError::GroupNumberPrecisionTooHigh(data.group_num_precision))
     }
 
     Ok(data)
@@ -73,9 +103,8 @@ fn parse_file_names(paths : Paths) -> Result<Vec<ParsedFileName>, FCError> {
     let mut ret = Vec::new();
     
     for entry in paths {
-        let entry = entry.map_err(|e| FCError::InvalidFile(e.to_string()))?;
-        let file_name = entry.file_name().unwrap().to_str().unwrap();
-        let parsed_file_name = ParsedFileName::from(file_name).map_err(|e| FCError::FileNameParsingError(e.to_string(), file_name.to_string()))?;
+        let path = entry.map_err(|e| FCError::InvalidFile(e))?;
+        let parsed_file_name = ParsedFileName::from_path(&path).map_err(|e| FCError::FileNameParsingError(path, e))?;
         ret.push(parsed_file_name);
     }
 
