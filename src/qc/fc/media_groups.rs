@@ -1,10 +1,12 @@
+use actix_web::http::header::TryIntoHeaderValue;
 use serde::Deserialize;
-use super::{error::FCError, file_names::ParsedFileName, FinalCheckRequest, PhotoGroupOptions};
-use little_exif::metadata::Metadata;
+
+use super::{error::FCError, media_file::MediaFile, FinalCheckRequest, PhotoGroupOptions};
+use little_exif::{endian::Endian, metadata::Metadata};
 use little_exif::exif_tag::ExifTag;
 
 pub mod error;
-use error::{ MediaGroupsError, MetadataCheckError };
+use error::{ MediaGroupsError };
 
 
 #[serde_with::skip_serializing_none]
@@ -44,15 +46,20 @@ impl MediaGroups {
     }
 
 
-    pub fn from_parsed_file_names(file_names: &Vec<ParsedFileName>) -> Result<MediaGroups, MediaGroupsError> {
-        let mut ret = MediaGroups { slides: None, prints: None, negatives: None };
+    pub fn from_parsed_file_names(file_names: &Vec<MediaFile>) -> Result<MediaGroups, MediaGroupsError> {
+        let ret = MediaGroups { slides: None, prints: None, negatives: None };
         Ok(ret)
     }
 
-    pub fn check_file_metadata(&self, parsed_file_name: &ParsedFileName) -> Result<(), MetadataCheckError> {
-        let metadata = Metadata::new_from_path(&parsed_file_name.path).map_err(|e| MetadataCheckError::CouldNotReadPath(parsed_file_name.path.clone(), e))?;
-        let tag = metadata.get_tag_by_hex(0xbc82);
-        dbg!(tag);
+
+    pub fn check_file_metadata(&self, parsed_file_name: &MediaFile) -> Result<(), MetadataCheckError> {
+        match parsed_file_name.media_type {
+            MediaType::Slides | MediaType::Prints | MediaType::Negatives => {
+                
+            }
+        }
+
+        
         Ok(())
         //let resolution_unit = metadata.get_tag(&ExifTag::XResolution(0));
     }

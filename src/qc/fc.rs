@@ -4,13 +4,13 @@ use serde::Deserialize;
 use glob::{glob, Paths};
 use crate::{utils::types::MediaType, FilesWs};
 
-mod file_names;
+mod media_file;
 mod error;
 mod media_groups;
 mod photo_group_options;
 
 use error::FCError;
-use file_names::ParsedFileName;
+use media_file::MediaFile;
 use media_groups::MediaGroups;
 use photo_group_options::PhotoGroupOptions;
 
@@ -50,11 +50,11 @@ pub fn check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Cont
     let mut pattern = build_directory_pattern(&dir, &final_check_request)?;
     
     let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e))?;
-    let parsed_file_names = parse_file_names(files)?;
-    let counted_media = MediaGroups::from_parsed_file_names(&parsed_file_names).map_err(|_| FCError::Todo)?;
+    let media_files = parse_media_files(files)?;
+    let counted_media = MediaGroups::from_parsed_file_names(&media_files).map_err(|_| FCError::Todo)?;
 
-    for parsed_file_name in &parsed_file_names {
-        counted_media.check_file_metadata(parsed_file_name);
+    for media_file in media_files.iter() {
+        counted_media.check_file_metadata(&media_file);
     }
 
     final_check_request.is_satisfied_by_media(counted_media)?;
@@ -75,7 +75,7 @@ fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest
             ret.push_str(&*format!("{padding}{num}\\"));
         }
     }
-
+    
     ret.push('*');
     Ok(ret)
 }
@@ -99,13 +99,13 @@ fn parse_final_check_request(request_json: Value) -> std::result::Result<FinalCh
 }
 
 
-fn parse_file_names(paths : Paths) -> Result<Vec<ParsedFileName>, FCError> {
+fn parse_media_files(paths : Paths) -> Result<Vec<MediaFile>, FCError> {
     let mut ret = Vec::new();
     
     for entry in paths {
         let path = entry.map_err(|e| FCError::InvalidFile(e))?;
-        let parsed_file_name = ParsedFileName::from_path(&path).map_err(|e| FCError::FileNameParsingError(path, e))?;
-        ret.push(parsed_file_name);
+        let media_file = MediaFile::from_path(&path).map_err(|e| FCError::FileNameParsingError(path, e))?;
+        ret.push(media_file);
     }
 
     Ok(ret)

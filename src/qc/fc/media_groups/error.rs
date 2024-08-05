@@ -11,20 +11,3 @@ impl std::fmt::Display for MediaGroupsError {
         }
     }
 }
-
-
-#[derive(Debug)]
-pub enum MetadataCheckError {
-    CouldNotReadPath(std::path::PathBuf, std::io::Error),
-    WrongDpi(u64, u64)
-}
-impl std::error::Error for MetadataCheckError {}
-impl std::fmt::Display for MetadataCheckError {
-    fn fmt(&self, f: &mut std::fmt::Formatter)
-    -> std::fmt::Result {
-        match self {
-            MetadataCheckError::CouldNotReadPath(path, err) => write!(f, "could not read {}: {err}", path.to_string_lossy()),
-            MetadataCheckError::WrongDpi(expected, found) => write!(f, "expected {expected} dpi, photo had {found} dpi")     
-        }
-    }
-}
