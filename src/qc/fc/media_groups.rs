@@ -1,6 +1,8 @@
 use actix_web::http::header::TryIntoHeaderValue;
 use serde::Deserialize;
 
+use crate::utils::types::media_types::MediaType;
+
 use super::{error::FCError, media_file::MediaFile, FinalCheckRequest, PhotoGroupOptions};
 use little_exif::{endian::Endian, metadata::Metadata};
 use little_exif::exif_tag::ExifTag;
@@ -48,19 +50,12 @@ impl MediaGroups {
 
     pub fn from_parsed_file_names(file_names: &Vec<MediaFile>) -> Result<MediaGroups, MediaGroupsError> {
         let ret = MediaGroups { slides: None, prints: None, negatives: None };
+
         Ok(ret)
     }
 
 
-    pub fn check_file_metadata(&self, parsed_file_name: &MediaFile) -> Result<(), MetadataCheckError> {
-        match parsed_file_name.media_type {
-            MediaType::Slides | MediaType::Prints | MediaType::Negatives => {
-                
-            }
-        }
-
-        
+    pub fn check_file_metadata(&self, media_file: &MediaFile) -> Result<(), MediaGroupsError> {
         Ok(())
-        //let resolution_unit = metadata.get_tag(&ExifTag::XResolution(0));
     }
 }

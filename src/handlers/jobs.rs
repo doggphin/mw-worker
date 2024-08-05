@@ -19,7 +19,7 @@ pub fn service_router(request: String, ctx: &mut<FilesWs as Actor>::Context) -> 
         "final_check" => {
             send_text::status("busy", ctx);
             send_text::msg("Starting final check!", ctx);
-            match fc::check(job_request.dir, json.clone(), ctx) {
+            match fc::final_check(job_request.dir, json.clone(), ctx) {
                 Ok(_) => {
                     send_text::msg("Final check successful!", ctx);
                     send_text::status("success", ctx);

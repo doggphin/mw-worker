@@ -1,7 +1,4 @@
-use little_exif::{endian::Endian, metadata::Metadata};
 use serde::Deserialize;
-
-use super::{error::MetadataCheckError, media_file::MediaFile};
 
 #[derive(Deserialize, Debug)]
 pub struct PhotoGroupOptions {
@@ -21,9 +18,3 @@ pub struct PhotoGroupOptions {
 fn default_0() -> u64 { 0 }
 fn default_false() -> bool { false }
 fn default_3() -> u64 { 3 }
-impl PhotoGroupOptions {
-    pub fn verify_dpi(&self, parsed_file_name: &MediaFile) -> Result<(), MetadataCheckError> {
-        // TODO: Verify DPI
-        Ok(())
-    }
-}

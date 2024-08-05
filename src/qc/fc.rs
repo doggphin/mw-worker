@@ -2,12 +2,12 @@ use actix::Actor;
 use serde_json::Value;
 use serde::Deserialize;
 use glob::{glob, Paths};
-use crate::{utils::types::MediaType, FilesWs};
+use crate::{FilesWs};
 
-mod media_file;
-mod error;
-mod media_groups;
-mod photo_group_options;
+pub mod media_file;
+pub mod error;
+pub mod media_groups;
+pub mod photo_group_options;
 
 use error::FCError;
 use media_file::MediaFile;
@@ -44,7 +44,7 @@ impl FinalCheckRequest {
 }
 
 
-pub fn check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Context) -> std::result::Result<(), FCError> {
+pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Context) -> std::result::Result<(), FCError> {
     let final_check_request = parse_final_check_request(request_json)?;
 
     let mut pattern = build_directory_pattern(&dir, &final_check_request)?;

@@ -1,6 +1,6 @@
 use glob::{GlobError, PatternError};
 
-use super::media_file::{error::MediaFileParseError, MediaFile};
+use super::media_file::error::MediaFileParseError;
 
 #[derive(Debug)]
 pub enum FCError {
@@ -13,7 +13,7 @@ pub enum FCError {
     InvalidFile(GlobError),
 
     FileNameParsingError(std::path::PathBuf, MediaFileParseError),
-    IncorrectMetadata(MediaFile, MetadataCheckError),
+    //IncorrectMetadata(MediaFile, MetadataCheckError),
 
     Todo
 }
@@ -29,7 +29,7 @@ impl std::fmt::Display for FCError {
             FCError::InvalidDirectory(err) => write!(f, "invalid directory: {err}"),
             FCError::InvalidFile(err) => write!(f, "invalid file path: {err}"),
             FCError::FileNameParsingError(path, err, ) => write!(f, "error parsing \"{}\"'s file name: {err}", path.to_str().unwrap_or("invalid path")),
-            FCError::IncorrectMetadata(media_file, err) => write!(f, "incorrect metadata found while checking \"{}\": {err}", media_file.path.to_string_lossy()),
+            //FCError::IncorrectMetadata(media_file, err) => write!(f, "incorrect metadata found while checking \"{}\": {err}", media_file.path.to_string_lossy()),
             FCError::Todo => write!(f, "todo")
 
         }

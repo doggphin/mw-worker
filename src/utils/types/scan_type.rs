@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ScanType {
+    Unknown,
     Default,
     HandScan,
     OversizedHandScan

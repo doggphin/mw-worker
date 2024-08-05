@@ -5,7 +5,7 @@ use regex;
 pub mod error;
 use error::MediaFileParseError;
 
-use crate::utils::types::{file_extension_type::FileExtensionType, media_types::MediaType, scan_type::ScanType};
+use crate::utils::types::{file_extension_type::FileExtensionType, media_types::{photo_media_data::PhotoMediaData, MediaType}, scan_type::ScanType};
 
 #[derive(Debug, Clone)]
 pub struct MediaFile {
@@ -133,7 +133,19 @@ impl MediaFile {
         }
 
         let last_name = last_name.to_string();
-        let media_type = media_type.unwrap();
+        let mut media_type = media_type.unwrap();
+        match media_type {
+            MediaType::Prints(_) => {
+                media_type = MediaType::Prints(PhotoMediaData::from_path(path).unwrap());
+            }
+            MediaType::Slides(_) => {
+                media_type = MediaType::Slides(PhotoMediaData::from_path(path).unwrap());
+            }
+            MediaType::Negatives(_) => {
+                media_type = MediaType::Negatives(PhotoMediaData::from_path(path).unwrap());
+            }
+        }
+        dbg!(&media_type);
         let path = path.clone();
         let raw_file_name = file_name.to_string();
         Ok(MediaFile { path, raw_file_name, last_name, first_name_initial, media_type, group_number, group_number_precision, group_character, index_number, index_number_precision, scan_type, file_extension })
