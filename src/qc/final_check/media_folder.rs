@@ -1,5 +1,5 @@
-use super::media_file::MediaFile;
-
+use super::{media_file::MediaFile, media_groups::MediaGroupValues};
 pub struct MediaFolder {
-    files : Vec<MediaFile>
+    pub files : Vec<MediaFile>,
+    pub group_options: MediaGroupValues
 }

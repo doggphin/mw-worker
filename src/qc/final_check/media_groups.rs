@@ -9,13 +9,13 @@ use error::MediaGroupsError;
 
 #[serde_with::skip_serializing_none]
 #[derive(Deserialize, Debug, Copy, Clone)]
-pub struct MediaGroupOptions {
+pub struct MediaGroupValues {
     pub slides: Option<PhotoGroupOptions>,
     pub prints: Option<PhotoGroupOptions>,
     pub negatives: Option<PhotoGroupOptions>
 }
-impl MediaGroupOptions {
-    pub fn counts_equal(&self, expected_media: MediaGroupOptions) -> Result<(), MediaGroupsError> {
+impl MediaGroupValues {
+    pub fn counts_equal(&self, expected_media: MediaGroupValues) -> Result<(), MediaGroupsError> {
         fn equals_or_err(counted: u64, expected: u64, media_and_scan_type : &str) -> Result<(), MediaGroupsError> {
             return match counted == expected {
                 true => Ok(()),
@@ -44,7 +44,7 @@ impl MediaGroupOptions {
     }
 
 
-    pub fn from_media_files(media_files: &Vec<MediaFile>) -> Result<MediaGroupOptions, MediaGroupsError> {
+    pub fn from_media_files(media_files: &Vec<MediaFile>) -> Result<MediaGroupValues, MediaGroupsError> {
         let mut slides = PhotoGroupOptions::new();
         let mut prints = PhotoGroupOptions::new();
         let mut negatives = PhotoGroupOptions::new();
@@ -85,28 +85,6 @@ impl MediaGroupOptions {
         let prints = if include_prints { Some(prints) } else { None };
         let negatives = if include_negatives { Some(negatives) } else { None };
 
-        Ok(MediaGroupOptions{slides, prints, negatives})
-    }
-
-
-    pub fn check_against_media_files(&self, media_files: &Vec<MediaFile>) -> Result<(), MediaGroupsError> {
-
-        fn check_against_photo_group_options(media_file: &MediaFile, photo_group_options: &Option<PhotoGroupOptions>, photo_data: &PhotoMediaData) -> Result<(), MediaGroupsError> {
-            if let Some(group_data) = photo_group_options {
-                return Ok(photo_data.check_against_group_options(&group_data).map_err(|e| MediaGroupsError::IncorrectPhotoMetadata(e))?);
-            } else {
-                return Err(MediaGroupsError::OutOfPlaceMediaType(media_file.media_type.clone()));
-            }
-        }
-
-        for media_file in media_files {
-            match &media_file.media_type {
-                MediaType::Prints(print_data) => check_against_photo_group_options(media_file, &self.prints, &print_data)?,
-                MediaType::Slides(slides_data) => check_against_photo_group_options(media_file, &self.slides, &slides_data)?,
-                MediaType::Negatives(negatives_data) => check_against_photo_group_options(media_file, &self.negatives, &negatives_data)?,
-            }
-        }
-
-        Ok(())
+        Ok(MediaGroupValues{slides, prints, negatives})
     }
 }

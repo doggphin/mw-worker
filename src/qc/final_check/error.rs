@@ -1,5 +1,7 @@
 use glob::{GlobError, PatternError};
 
+use crate::utils::types::media_types::{photo_media_data::error::PhotoMediaDataError, MediaType};
+
 use super::{media_file::{error::MediaFileParseError, MediaFile}, media_groups::error::MediaGroupsError};
 
 #[derive(Debug)]
@@ -13,7 +15,18 @@ pub enum FCError {
     MediaGroupingError(MediaGroupsError),
     MediaFileParseError(std::path::PathBuf, MediaFileParseError),
     IncorrectMediaCount(MediaGroupsError),
-    IncorrectMetadataError(MediaGroupsError)
+
+    IncorrectPhotoMetadata(PhotoMediaDataError),
+    OutOfPlaceMediaType(MediaType),
+    IncorrectLastName(String, String, MediaFile),
+    IncorrectFirstInitial(char, char, MediaFile),
+    MissingGroupNumber(u64, MediaFile),
+    IncorrectGroupNumber(u64, u64, MediaFile),
+    MissingGroupChar(char, MediaFile),
+    IncorrectGroupChar(char, char, MediaFile),
+    IncorrectGroupNumberPrecision(u64, u64, MediaFile),
+    RepeatedIndexNumber(u32, String, String),
+    FolderSkippedIndexNumber(u32)
 }
 impl std::error::Error for FCError {}
 impl std::fmt::Display for FCError {
@@ -29,7 +42,18 @@ impl std::fmt::Display for FCError {
             FCError::MediaGroupingError(e) => write!(f, "error grouping media files: {e}"),
             FCError::MediaFileParseError(path, e) => write!(f, "error parsing {}: {e}", path.to_string_lossy()),
             FCError::IncorrectMediaCount(e) => write!(f, "incorrect media count: {e}"),
-            FCError::IncorrectMetadataError(e) => write!(f, "media file had incorrect metadata: {e}")
+            
+            FCError::IncorrectPhotoMetadata(e) => write!(f, "incorrect photo metadata: {e}"),
+            FCError::OutOfPlaceMediaType(media_type) => write!(f, "found a file with {}, but wasn't expecting any", media_type.to_string()),
+            FCError::IncorrectLastName(expected, got, media_file) => write!(f, "file {} had last name {got} when it should be {expected}", media_file.raw_file_name),
+            FCError::IncorrectFirstInitial(expected, got, media_file) => write!(f, "file {} had a first initial {got} when it should have been {expected}", media_file.raw_file_name),
+            FCError::MissingGroupNumber(expected, media_file) => write!(f, "file {} had no group number when it should have been {expected}", media_file.raw_file_name),
+            FCError::IncorrectGroupNumber(expected, got, media_file) => write!(f, "file {} had group number {got} when it should have been {expected}", media_file.raw_file_name),
+            FCError::MissingGroupChar(expected, media_file) => write!(f, "file {} had no group character when it should have been {expected}", media_file.raw_file_name),
+            FCError::IncorrectGroupChar(expected, got, media_file) => write!(f, "file {} had group character {got} when it should have been {expected}", media_file.raw_file_name),
+            FCError::IncorrectGroupNumberPrecision(expected, got, media_file) => write!(f, "file {} had a group number precision of {got} digits when it should have been {expected} digits", media_file.raw_file_name),
+            FCError::RepeatedIndexNumber(index_number, file_name_1, file_name_2) => write!(f, "files {file_name_1} and {file_name_2} have the same index number {index_number}"),
+            FCError::FolderSkippedIndexNumber(index_number) => write!(f, "folder skipped index number {index_number}")
         }
     }
 }

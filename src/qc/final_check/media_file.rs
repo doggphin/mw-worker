@@ -1,11 +1,10 @@
-use std::{ffi::OsStr, path::PathBuf, str::FromStr};
-use little_exif::metadata::Metadata;
+use std::{ffi::OsStr, str::FromStr};
 use regex;
 
 pub mod error;
 use error::MediaFileParseError;
 
-use crate::utils::types::{file_extension_type::FileExtensionType, media_types::{photo_media_data::PhotoMediaData, MediaType}, scan_type::ScanType};
+use crate::utils::types::{file_extension_type::FileExtensionType, media_types:: MediaType, scan_type::ScanType};
 
 #[derive(Debug, Clone)]
 pub struct MediaFile {

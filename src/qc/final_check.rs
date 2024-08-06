@@ -1,45 +1,27 @@
 use actix::Actor;
+use media_folder::MediaFolder;
 use serde_json::Value;
 use serde::Deserialize;
 use glob::{glob, Paths};
-use crate::{FilesWs};
+use crate::FilesWs;
 
 pub mod media_file;
 pub mod media_folder;
 pub mod error;
 pub mod media_groups;
 pub mod photo_group_options;
+pub mod final_check_request;
 
 use error::FCError;
 use media_file::MediaFile;
-use media_groups::MediaGroupOptions;
+use media_groups::MediaGroupValues;
 use photo_group_options::PhotoGroupOptions;
+use final_check_request::FinalCheckRequest;
 
 
 #[derive(Deserialize, Debug)]
 struct Data {
     data: FinalCheckRequest
-}
-
-#[derive(Deserialize, Debug)]
-struct FinalCheckRequest {
-    first_name: String,
-    last_name: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    custom_group_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    group_num: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    group_char: Option<char>,
-    #[serde(default = "default_2")]
-    group_num_precision: u64,   // Guaranteed 6 or less
-
-    media: MediaGroupOptions
-}
-fn default_2() -> u64 { 2 }
-impl FinalCheckRequest {
-
 }
 
 
@@ -50,10 +32,12 @@ pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>
     
     let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e))?;
     let media_files = parse_media_files(files)?;
-    let counted_media = MediaGroupOptions::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
-    counted_media.counts_equal(final_check_req.media).map_err(|e| FCError::IncorrectMediaCount(e))?;
+    let counted_media: MediaGroupValues = MediaGroupValues::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
 
-    final_check_req.media.check_against_media_files(&media_files).map_err(|e| FCError::IncorrectMetadataError(e))?;
+    let media_folder = MediaFolder { files: media_files, group_options: counted_media };
+    media_folder.group_options.counts_equal(final_check_req.media_group_values).map_err(|e| FCError::IncorrectMediaCount(e))?;
+
+    final_check_req.verify_media_folder(media_folder)?;
 
     Ok(())
 }
@@ -77,7 +61,7 @@ fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest
 fn parse_final_check_request(request_json: Value) -> std::result::Result<FinalCheckRequest, FCError> {
     let data = serde_json::from_value::<Data>(request_json).map_err(|e| FCError::DeserializeError(e))?;
     let data = data.data;
-    if data.media.slides.is_none() && data.media.negatives.is_none() && data.media.prints.is_none() {
+    if data.media_group_values.slides.is_none() && data.media_group_values.negatives.is_none() && data.media_group_values.prints.is_none() {
         return Err(FCError::InvalidRequest("no properties were defined in request for expecting_media".to_string()));
     }
     if let Some(group_num) = data.group_num {
