@@ -3,7 +3,7 @@ pub mod error;
 use photo_media_data::PhotoMediaData;
 use error::MediaTypeError;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum MediaType {
     Prints(PhotoMediaData),
     Slides(PhotoMediaData),

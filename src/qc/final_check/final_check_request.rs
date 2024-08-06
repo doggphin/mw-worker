@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::{qc::final_check::{error::FCError, media_file::MediaFile, photo_group_options::PhotoGroupOptions}, utils::types::media_types::{photo_media_data::PhotoMediaData, MediaType}};
+use crate::{qc::final_check::{error::FCError, media_file::MediaFile, photo_group_options::PhotoGroupOptions}, utils::types::{file_extension_type::FileExtensionType, media_types::{photo_media_data::PhotoMediaData, MediaType}}};
 
 use super::{media_folder::MediaFolder, media_groups::MediaGroupValues};
 
@@ -33,7 +33,7 @@ impl FinalCheckRequest {
             if let Some(group_data) = photo_group_options {
                 return Ok(photo_data.check_against_group_options(&group_data).map_err(|e| FCError::IncorrectPhotoMetadata(e))?);
             } else {
-                return Err(FCError::OutOfPlaceMediaType(media_file.media_type.clone()));
+                return Err(FCError::OutOfPlaceMediaType(media_file.media_type.clone()))
             }
         }
 
@@ -43,6 +43,14 @@ impl FinalCheckRequest {
                 MediaType::Prints(print_data) => check_against_photo_group_options(&media_file, &self.media_group_values.prints, &print_data)?,
                 MediaType::Slides(slides_data) => check_against_photo_group_options(&media_file, &self.media_group_values.slides, &slides_data)?,
                 MediaType::Negatives(negatives_data) => check_against_photo_group_options(&media_file, &self.media_group_values.negatives, &negatives_data)?,
+            }
+            match &media_file.media_type {
+                MediaType::Prints(_) | MediaType::Slides(_) | MediaType::Negatives(_) => {
+                    match &media_file.file_extension {
+                        FileExtensionType::Tiff | FileExtensionType::Jpeg => {}
+                        _ => { return Err(FCError::IncompatibleFileExtension(media_file.media_type, media_file.file_extension, media_file)); }
+                    }
+                }
             }
 
             if media_file.last_name != self.last_name {
@@ -79,7 +87,12 @@ impl FinalCheckRequest {
             if let Some(repeated_file_name) = seen_index_numbers.insert(media_file.index_number, media_file.raw_file_name.clone()) {
                 return Err(FCError::RepeatedIndexNumber(media_file.index_number, media_file.raw_file_name, repeated_file_name))
             }
+            let media_file_index_num_precision = u64::try_from(media_file.index_number_precision).unwrap();
+            if media_file_index_num_precision != self.index_num_precision {
+                return Err(FCError::IncorrectIndexNumberPrecision(self.index_num_precision, media_file_index_num_precision, media_file))
+            }
         }
+
         let mut seen_index_numbers: Vec<u32> = seen_index_numbers.keys().cloned().collect();
         seen_index_numbers.sort();
         let mut expecting_value = 1;
@@ -89,6 +102,7 @@ impl FinalCheckRequest {
             }
             expecting_value += 1;
         }
+
 
         Ok(())
     }

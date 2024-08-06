@@ -4,7 +4,7 @@ use error::PhotoMediaDataError;
 use little_exif::{endian::Endian, metadata::Metadata};
 use crate::{qc::final_check::photo_group_options::PhotoGroupOptions, utils::types::scan_type::ScanType};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct  PhotoMediaData {
     dpi: u32,
     is_corrected: bool,

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ScanType {
     Default,
     HandScan,
