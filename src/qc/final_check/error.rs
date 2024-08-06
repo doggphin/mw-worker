@@ -11,6 +11,7 @@ pub enum FCError {
     GroupNumberPrecisionTooHigh(u64),
     InvalidRequest(String),
     InvalidDirectory(PatternError),
+    NoFilesInDirectory(String),
     InvalidFile(GlobError),
     MediaGroupingError(MediaGroupsError),
     MediaFileParseError(std::path::PathBuf, MediaFileParseError),
@@ -40,11 +41,12 @@ impl std::fmt::Display for FCError {
             FCError::GroupNumberPrecisionTooHigh(precision) => write!(f, "group number precision of {precision} is higher than the maximum 6"),
             FCError::InvalidRequest(err) => write!(f, "invalid request: {err}"),
             FCError::InvalidDirectory(err) => write!(f, "invalid directory: {err}"),
+            FCError::NoFilesInDirectory(dir) => write!(f, "no files could be found in/at {dir}"),
             FCError::InvalidFile(err) => write!(f, "invalid file path: {err}"),
             FCError::MediaGroupingError(e) => write!(f, "error grouping media files: {e}"),
             FCError::MediaFileParseError(path, e) => write!(f, "error parsing {}: {e}", path.to_string_lossy()),
             FCError::IncorrectMediaCount(e) => write!(f, "incorrect media count: {e}"),
-            // ===
+
             FCError::IncorrectPhotoMetadata(e) => write!(f, "incorrect photo metadata: {e}"),
             FCError::IncompatibleFileExtension(media_type, file_extension_type, media_file) => 
                 write!(f, "file {} has a media type of {} but an incompatible file extension of {}", media_type.to_string(), file_extension_type.to_string(), media_file.raw_file_name),

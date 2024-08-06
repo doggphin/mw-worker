@@ -34,11 +34,14 @@ enum SectionReadState {
     End
 }
 impl MediaFile {
-    pub fn from_path(path: &std::path::PathBuf) -> Result<MediaFile, MediaFileParseError> {
+    pub fn from_path(path: &std::path::PathBuf) -> Result<Option<MediaFile>, MediaFileParseError> {
         if !path.is_file() {
             return Err(MediaFileParseError::NotAFile(path.clone()))
         }
         let file_name = &*path.file_name().unwrap_or(OsStr::new("invalid file name")).to_string_lossy().into_owned();
+        if file_name.to_lowercase() == "thumbs.db" {
+            return Ok(None)
+        }
         let re = regex::Regex::new(r"[._]").unwrap();
 
         let mut last_name: &str = "";
@@ -135,7 +138,7 @@ impl MediaFile {
         let raw_file_name = file_name.to_string();
         let ret = MediaFile { path, raw_file_name, last_name, first_name_initial, media_type, group_number, group_number_precision,
             group_character, index_number, index_number_precision, scan_type, file_extension };
-        Ok(ret)
+        Ok(Some(ret))
     }
 }
 

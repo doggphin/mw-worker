@@ -32,6 +32,9 @@ pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>
     
     let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e))?;
     let media_files = parse_media_files(files)?;
+    if media_files.len() == 0 {
+        return Err(FCError::NoFilesInDirectory(pattern));
+    }
     let counted_media: MediaGroupValues = MediaGroupValues::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
 
     let media_folder = MediaFolder { files: media_files, group_options: counted_media };
@@ -48,12 +51,11 @@ fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest
 
     if let Some(num) = final_check_request.group_num.and_then(|num| Some(num.to_string())) {
         let precision_difference: usize = usize::try_from(final_check_request.group_num_precision).unwrap() - num.len();
-        if precision_difference > 0 {
-            let padding = str::repeat("0", precision_difference);
-            ret.push_str(&*format!("{padding}{num}\\"));
-        }
+        let padding: &str = if precision_difference > 0 { &str::repeat("0", precision_difference) } else {""};
+        ret.push_str(&*format!("{padding}{num}\\"));
     }
     
+    println!("Trying to read {}", ret);
     ret.push('*');
     Ok(ret)
 }
@@ -83,7 +85,9 @@ fn parse_media_files(paths : Paths) -> Result<Vec<MediaFile>, FCError> {
     for entry in paths {
         let path = entry.map_err(|e| FCError::InvalidFile(e))?;
         let media_file = MediaFile::from_path(&path).map_err(|e| FCError::MediaFileParseError(path, e))?;
-        ret.push(media_file);
+        if let Some(media_file) = media_file {
+            ret.push(media_file);
+        }
     }
 
     Ok(ret)
