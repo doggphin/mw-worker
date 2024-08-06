@@ -1,8 +1,11 @@
+use crate::utils::types::media_types::error::MediaTypeError;
+
 #[derive(Debug)]
 pub enum MediaFileParseError {
     NameShort(String),
     NotAFile(std::path::PathBuf),
-    UnrecognizedMediaType(String),
+    //UnrecognizedMediaType(String),
+    MediaTypeError(MediaTypeError),
     ExpectedGroupOrIndexNumber(String),
     NoIndexNumber,
     InvalidExtension(String),
@@ -15,7 +18,8 @@ impl std::fmt::Display for MediaFileParseError {
         match self {
             MediaFileParseError::NameShort(word) => write!(f, "name \"{word}\" was too short"),
             MediaFileParseError::NotAFile(path) => write!(f, "path \"{}\" is not a file", path.to_string_lossy()),
-            MediaFileParseError::UnrecognizedMediaType(word) => write!(f, "unrecognized media type \"{word}\""),
+            //MediaFileParseError::UnrecognizedMediaType(word) => write!(f, "unrecognized media type \"{word}\""),
+            MediaFileParseError::MediaTypeError(e) => write!(f, "error getting media type: {e}"),
             MediaFileParseError::ExpectedGroupOrIndexNumber(word) => write!(f, "unrecognized text \"{word}\" where a group or index number should have been"),
             MediaFileParseError::NoIndexNumber => write!(f, "no index number could be found"),
             MediaFileParseError::InvalidExtension(word) => write!(f, "invalid extension \"{word}\""),

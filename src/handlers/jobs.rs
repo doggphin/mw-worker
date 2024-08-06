@@ -1,7 +1,7 @@
 use actix::Actor;
 use serde::Deserialize;
 use serde_json::Value;
-use crate::{qc::fc, utils::send_text, FilesWs};
+use crate::{qc::final_check, utils::send_text, FilesWs};
 
 mod error;
 use error::ServicesError;
@@ -19,7 +19,7 @@ pub fn service_router(request: String, ctx: &mut<FilesWs as Actor>::Context) -> 
         "final_check" => {
             send_text::status("busy", ctx);
             send_text::msg("Starting final check!", ctx);
-            match fc::final_check(job_request.dir, json.clone(), ctx) {
+            match final_check::final_check(job_request.dir, json.clone(), ctx) {
                 Ok(_) => {
                     send_text::msg("Final check successful!", ctx);
                     send_text::status("success", ctx);

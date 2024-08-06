@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, str::FromStr};
+use std::{ffi::OsStr, path::PathBuf, str::FromStr};
 use little_exif::metadata::Metadata;
 use regex;
 
@@ -64,8 +64,7 @@ impl MediaFile {
                         break;
                     }
                     SectionReadState::MediaType => {
-                        let parsed_media_type = word_to_media_type(word)?;
-                        media_type = Some(parsed_media_type);
+                        media_type = Some(MediaType::from_path(word, path).map_err(|e| MediaFileParseError::MediaTypeError(e))?);
                         current_section = SectionReadState::GroupNumber;
                         break;
                     }
@@ -114,7 +113,7 @@ impl MediaFile {
                         };
                         current_section = SectionReadState::Extension;
                         if scan_type != ScanType::Default {
-                            // If scan type was read, consume iterator
+                            // If scan type was successfuly read here, consume iterator
                             break;
                         }
                         // Try reading this word as an extension instead
@@ -133,22 +132,12 @@ impl MediaFile {
         }
 
         let last_name = last_name.to_string();
-        let mut media_type = media_type.unwrap();
-        match media_type {
-            MediaType::Prints(_) => {
-                media_type = MediaType::Prints(PhotoMediaData::from_path(path).unwrap());
-            }
-            MediaType::Slides(_) => {
-                media_type = MediaType::Slides(PhotoMediaData::from_path(path).unwrap());
-            }
-            MediaType::Negatives(_) => {
-                media_type = MediaType::Negatives(PhotoMediaData::from_path(path).unwrap());
-            }
-        }
-        dbg!(&media_type);
+        let media_type = media_type.unwrap();
         let path = path.clone();
         let raw_file_name = file_name.to_string();
-        Ok(MediaFile { path, raw_file_name, last_name, first_name_initial, media_type, group_number, group_number_precision, group_character, index_number, index_number_precision, scan_type, file_extension })
+        let ret = MediaFile { path, raw_file_name, last_name, first_name_initial, media_type, group_number, group_number_precision,
+            group_character, index_number, index_number_precision, scan_type, file_extension };
+        Ok(ret)
     }
 }
 
@@ -163,9 +152,6 @@ fn parse_client_name(word: &str) -> Result<(&str, char), MediaFileParseError> {
     Ok((last_name, first_initial))
 }
 
-fn word_to_media_type(word: &str) -> Result<MediaType, MediaFileParseError> {
-    MediaType::from_str(word).map_err(|_| MediaFileParseError::UnrecognizedMediaType(word.to_string()))
-}
 
 fn try_get_number(word: &str) -> Result<u32, ()> {
     word.parse::<u32>().map_err(|_| ())
