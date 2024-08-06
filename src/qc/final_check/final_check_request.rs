@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-
 use serde::Deserialize;
-
 use crate::{qc::final_check::{error::FCError, media_file::MediaFile, photo_group_options::PhotoGroupOptions}, utils::types::{file_extension_type::FileExtensionType, media_types::{photo_media_data::PhotoMediaData, MediaType}}};
-
 use super::{media_folder::MediaFolder, media_groups::MediaGroupValues};
 
 #[derive(Deserialize, Debug)]
@@ -27,14 +24,25 @@ pub struct FinalCheckRequest {
 fn default_2() -> u64 { 2 }
 fn default_3() -> u64 { 3 }
 impl FinalCheckRequest {
+    /// Checks whether a media folder satisfies this final check request.
     pub fn verify_media_folder(&self, media_folder: MediaFolder) -> Result<(), FCError> {
 
+        /// Check a photo data against a photo group options. MediaFile included for errors.
         fn check_against_photo_group_options(media_file: &MediaFile, photo_group_options: &Option<PhotoGroupOptions>, photo_data: &PhotoMediaData) -> Result<(), FCError> {
-            if let Some(group_data) = photo_group_options {
-                return Ok(photo_data.check_against_group_options(&group_data).map_err(|e| FCError::IncorrectPhotoMetadata(e))?);
+            if let Some(photo_group_options) = photo_group_options {
+                if let Some(expected_dpi) = photo_group_options.dpi {
+                    if photo_data.dpi != expected_dpi {
+                        return Err(FCError::IncorrectDpi(expected_dpi, photo_data.dpi, media_file.clone()))
+                    }
+                }
+                if photo_group_options.is_corrected && !photo_data.is_corrected {
+                    return Err(FCError::NotCorrected(media_file.clone()))
+                }
             } else {
                 return Err(FCError::OutOfPlaceMediaType(media_file.media_type.clone()))
             }
+
+            Ok(())
         }
 
         let mut seen_index_numbers: HashMap<u32, String> = HashMap::new();

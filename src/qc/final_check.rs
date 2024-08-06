@@ -35,9 +35,9 @@ pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>
     if media_files.len() == 0 {
         return Err(FCError::NoFilesInDirectory(pattern));
     }
-    let counted_media: MediaGroupValues = MediaGroupValues::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
+    let counted_media_groups: MediaGroupValues = MediaGroupValues::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
 
-    let media_folder = MediaFolder { files: media_files, group_options: counted_media };
+    let media_folder = MediaFolder { files: media_files, group_options: counted_media_groups };
     media_folder.group_options.counts_equal(final_check_req.media_group_values).map_err(|e| FCError::IncorrectMediaCount(e))?;
 
     final_check_req.verify_media_folder(media_folder)?;
@@ -54,9 +54,8 @@ fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest
         let padding: &str = if precision_difference > 0 { &str::repeat("0", precision_difference) } else {""};
         ret.push_str(&*format!("{padding}{num}\\"));
     }
-    
-    println!("Trying to read {}", ret);
     ret.push('*');
+
     Ok(ret)
 }
 

@@ -2,30 +2,15 @@ pub mod error;
 use std::{panic, path::PathBuf};
 use error::PhotoMediaDataError;
 use little_exif::{endian::Endian, metadata::Metadata};
-use crate::{qc::final_check::photo_group_options::PhotoGroupOptions, utils::types::scan_type::ScanType};
+use crate::utils::types::scan_type::ScanType;
 
 #[derive(Debug, Clone, Copy)]
 pub struct  PhotoMediaData {
-    dpi: u32,
-    is_corrected: bool,
-    true_scan_type: Option<ScanType>,
+    pub dpi: u64,
+    pub is_corrected: bool,
+    pub true_scan_type: Option<ScanType>,
 }
-impl PhotoMediaData {
-    pub fn check_against_group_options(&self, check_against: &PhotoGroupOptions) -> Result<(), PhotoMediaDataError> {
-        if let Some(expected_dpi) = check_against.dpi {
-            if  expected_dpi != u64::from(self.dpi) {
-                return Err(PhotoMediaDataError::IncorrectDpi(expected_dpi, self.dpi));
-            }
-        }
-        // Only return an error if it was supposed to be corrected and wasn't; non-corrected groups can have corrected images
-        if check_against.is_corrected {
-            if !self.is_corrected {
-                return Err(PhotoMediaDataError::NotCorrected);
-            }
-        }
-        Ok(())
-    }
-    
+impl PhotoMediaData {   
     pub fn from_path(path: &PathBuf) -> Result<PhotoMediaData, PhotoMediaDataError> {
         fn get_dpi(metadata: &Metadata, hex_code: u16) -> Result<u32, PhotoMediaDataError> {
             let dpi = metadata.get_tag_by_hex(hex_code).ok_or(PhotoMediaDataError::NoDpiFound)?.value_as_u8_vec(&Endian::Little);
@@ -43,7 +28,7 @@ impl PhotoMediaData {
         if horiz_dpi != vert_dpi {
             return Err(PhotoMediaDataError::DifferentXYDpi(horiz_dpi, vert_dpi));
         }
-        let dpi = horiz_dpi;
+        let dpi = u64::from(horiz_dpi);
 
         // Get software if used
         let mut is_corrected = false;

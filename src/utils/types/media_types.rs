@@ -19,6 +19,7 @@ impl ToString for MediaType {
     }
 }
 impl MediaType {
+    /// Creates a MediaType with its respective MediaData from the media type as a string and a file path.
     pub fn from_path(word: &str, path: &std::path::PathBuf) -> Result<MediaType, MediaTypeError> {
         match word {
             "Prints" => Ok(MediaType::Prints(PhotoMediaData::from_path(path).map_err(|e| MediaTypeError::PhotoMediaDataError(e))?)),

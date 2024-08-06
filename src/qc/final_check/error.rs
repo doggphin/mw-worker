@@ -1,6 +1,6 @@
 use glob::{GlobError, PatternError};
 
-use crate::utils::types::{file_extension_type::FileExtensionType, media_types::{photo_media_data::error::PhotoMediaDataError, MediaType}};
+use crate::utils::types::{file_extension_type::FileExtensionType, media_types::MediaType};
 
 use super::{media_file::{error::MediaFileParseError, MediaFile}, media_groups::error::MediaGroupsError};
 
@@ -17,11 +17,12 @@ pub enum FCError {
     MediaFileParseError(std::path::PathBuf, MediaFileParseError),
     IncorrectMediaCount(MediaGroupsError),
 
-    IncorrectPhotoMetadata(PhotoMediaDataError),
     IncompatibleFileExtension(MediaType, FileExtensionType, MediaFile),
     OutOfPlaceMediaType(MediaType),
     IncorrectLastName(String, String, MediaFile),
     IncorrectFirstInitial(char, char, MediaFile),
+    IncorrectDpi(u64, u64, MediaFile),
+    NotCorrected(MediaFile),
     MissingGroupNumber(u64, MediaFile),
     IncorrectGroupNumber(u64, u64, MediaFile),
     MissingGroupChar(char, MediaFile),
@@ -47,12 +48,13 @@ impl std::fmt::Display for FCError {
             FCError::MediaFileParseError(path, e) => write!(f, "error parsing {}: {e}", path.to_string_lossy()),
             FCError::IncorrectMediaCount(e) => write!(f, "incorrect media count: {e}"),
 
-            FCError::IncorrectPhotoMetadata(e) => write!(f, "incorrect photo metadata: {e}"),
             FCError::IncompatibleFileExtension(media_type, file_extension_type, media_file) => 
                 write!(f, "file {} has a media type of {} but an incompatible file extension of {}", media_type.to_string(), file_extension_type.to_string(), media_file.raw_file_name),
             FCError::OutOfPlaceMediaType(media_type) => write!(f, "found a file with {}, but wasn't expecting any", media_type.to_string()),
             FCError::IncorrectLastName(expected, got, media_file) => write!(f, "file {} had last name {got} when it should be {expected}", media_file.raw_file_name),
             FCError::IncorrectFirstInitial(expected, got, media_file) => write!(f, "file {} had a first initial {got} when it should have been {expected}", media_file.raw_file_name),
+            FCError::IncorrectDpi(expected, got, media_file) => write!(f, "file {} had dpi {got} when it should have been {expected}", media_file.raw_file_name),
+            FCError::NotCorrected(media_file) => write!(f, "file {} has not been corrected", media_file.raw_file_name),
             FCError::MissingGroupNumber(expected, media_file) => write!(f, "file {} had no group number when it should have been {expected}", media_file.raw_file_name),
             FCError::IncorrectGroupNumber(expected, got, media_file) => write!(f, "file {} had group number {got} when it should have been {expected}", media_file.raw_file_name),
             FCError::MissingGroupChar(expected, media_file) => write!(f, "file {} had no group character when it should have been {expected}", media_file.raw_file_name),
