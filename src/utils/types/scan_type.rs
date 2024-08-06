@@ -17,3 +17,12 @@ impl FromStr for ScanType {
         }
     }
 }
+impl ToString for ScanType {
+    fn to_string(&self) -> String {
+        match self {
+            ScanType::Default => "Default".to_string(),
+            ScanType::HandScan => "Hand Scan".to_string(),
+            ScanType::OversizedHandScan => "Oversized Hand Scan".to_string(),
+        }
+    }
+}

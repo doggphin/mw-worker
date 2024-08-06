@@ -40,7 +40,6 @@ impl MediaFile {
             return Err(MediaFileParseError::NotAFile(path.clone()))
         }
         let file_name = &*path.file_name().unwrap_or(OsStr::new("invalid file name")).to_string_lossy().into_owned();
-        println!("{file_name}");
         let re = regex::Regex::new(r"[._]").unwrap();
 
         let mut last_name: &str = "";

@@ -2,7 +2,7 @@ pub mod error;
 use std::{panic, path::PathBuf};
 use error::PhotoMediaDataError;
 use little_exif::{endian::Endian, metadata::Metadata};
-use crate::utils::types::scan_type::ScanType;
+use crate::{qc::final_check::photo_group_options::PhotoGroupOptions, utils::types::scan_type::ScanType};
 
 #[derive(Debug, Clone)]
 pub struct  PhotoMediaData {
@@ -11,6 +11,21 @@ pub struct  PhotoMediaData {
     true_scan_type: Option<ScanType>,
 }
 impl PhotoMediaData {
+    pub fn check_against_group_options(&self, check_against: &PhotoGroupOptions) -> Result<(), PhotoMediaDataError> {
+        if let Some(expected_dpi) = check_against.dpi {
+            if  expected_dpi != u64::from(self.dpi) {
+                return Err(PhotoMediaDataError::IncorrectDpi(expected_dpi, self.dpi));
+            }
+        }
+        // Only return an error if it was supposed to be corrected and wasn't; non-corrected groups can have corrected images
+        if check_against.is_corrected {
+            if !self.is_corrected {
+                return Err(PhotoMediaDataError::NotCorrected);
+            }
+        }
+        Ok(())
+    }
+    
     pub fn from_path(path: &PathBuf) -> Result<PhotoMediaData, PhotoMediaDataError> {
         fn get_dpi(metadata: &Metadata, hex_code: u16) -> Result<u32, PhotoMediaDataError> {
             let dpi = metadata.get_tag_by_hex(hex_code).ok_or(PhotoMediaDataError::NoDpiFound)?.value_as_u8_vec(&Endian::Little);

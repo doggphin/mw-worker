@@ -9,6 +9,15 @@ pub enum MediaType {
     Slides(PhotoMediaData),
     Negatives(PhotoMediaData)
 }
+impl ToString for MediaType {
+    fn to_string(&self) -> String {
+        match self {
+            MediaType::Prints(_) => "Prints".to_string(),
+            MediaType::Slides(_) => "Slides".to_string(),
+            MediaType::Negatives(_) => "Negatives".to_string(),
+        }
+    }
+}
 impl MediaType {
     pub fn from_path(word: &str, path: &std::path::PathBuf) -> Result<MediaType, MediaTypeError> {
         match word {

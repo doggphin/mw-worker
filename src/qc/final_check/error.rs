@@ -1,6 +1,6 @@
 use glob::{GlobError, PatternError};
 
-use super::media_file::error::MediaFileParseError;
+use super::{media_file::{error::MediaFileParseError, MediaFile}, media_groups::error::MediaGroupsError};
 
 #[derive(Debug)]
 pub enum FCError {
@@ -8,14 +8,12 @@ pub enum FCError {
     InsufficientGroupNumberPrecision(u64, u64),
     GroupNumberPrecisionTooHigh(u64),
     InvalidRequest(String),
-
     InvalidDirectory(PatternError),
     InvalidFile(GlobError),
-
-    FileNameParsingError(std::path::PathBuf, MediaFileParseError),
-    //IncorrectMetadata(MediaFile, MetadataCheckError),
-
-    Todo
+    MediaGroupingError(MediaGroupsError),
+    MediaFileParseError(std::path::PathBuf, MediaFileParseError),
+    IncorrectMediaCount(MediaGroupsError),
+    IncorrectMetadataError(MediaGroupsError)
 }
 impl std::error::Error for FCError {}
 impl std::fmt::Display for FCError {
@@ -28,10 +26,10 @@ impl std::fmt::Display for FCError {
             FCError::InvalidRequest(err) => write!(f, "invalid request: {err}"),
             FCError::InvalidDirectory(err) => write!(f, "invalid directory: {err}"),
             FCError::InvalidFile(err) => write!(f, "invalid file path: {err}"),
-            FCError::FileNameParsingError(path, err, ) => write!(f, "error parsing \"{}\"'s file name: {err}", path.to_str().unwrap_or("invalid path")),
-            //FCError::IncorrectMetadata(media_file, err) => write!(f, "incorrect metadata found while checking \"{}\": {err}", media_file.path.to_string_lossy()),
-            FCError::Todo => write!(f, "todo")
-
+            FCError::MediaGroupingError(e) => write!(f, "error grouping media files: {e}"),
+            FCError::MediaFileParseError(path, e) => write!(f, "error parsing {}: {e}", path.to_string_lossy()),
+            FCError::IncorrectMediaCount(e) => write!(f, "incorrect media count: {e}"),
+            FCError::IncorrectMetadataError(e) => write!(f, "media file had incorrect metadata: {e}")
         }
     }
 }
