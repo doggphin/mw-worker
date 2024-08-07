@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use actix::{Actor, StreamHandler};
 use actix_cors::Cors;
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
@@ -9,22 +10,26 @@ mod qc;
 mod utils;
 use utils::send_text;
 
-struct FilesWs;
-impl Actor for FilesWs {
+struct WorkerWs;
+impl Actor for WorkerWs {
     type Context = ws::WebsocketContext<Self>;
 }
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorkerWs {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             Ok(ws::Message::Text(text)) => {
                 print!("Received a message:\n{}\n", text);
-                if let Err(e) = jobs::service_router(text.to_string(), ctx) {
-                    println!("Closing socket because: {}", e.to_string());
+                let _ = jobs::service_router(text.to_string(), ctx);
+                /*if let Err(e) = jobs::service_router(text.to_string(), ctx) {
                     ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Error, description: Some(e.to_string()) } ))
-                }
+                }*/
             }
-            Ok(ws::Message::Close(None)) => {
-                ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Normal, description: None }))
+            Ok(ws::Message::Close(close_reason)) => {
+                println!("Received a close message!");
+                if let Some(reason) = &close_reason {
+                    println!("Closing socket because: {} ({})", reason.description.clone().unwrap_or("(no close reason provided)".to_string()), u16::from(reason.code))
+                }
+                ctx.close(close_reason);
             }
             _ => (),
         }
@@ -34,15 +39,19 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for FilesWs {
         println!("Opened a socket!");
         send_text::msg("Connected to a worker!", ctx);
     }
+
+    fn finished(&mut self, _ctx: &mut Self::Context) {
+        println!("Closed a socket!");
+    }
 }
 
 async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
-    ws::start(FilesWs {}, &req, stream)
+    ws::start(WorkerWs {}, &req, stream)
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let ip = "localhost";
+    let ip = "127.0.0.1";
     let port = 7001;
     let server = HttpServer::new(move || {
         let cors = Cors::permissive();

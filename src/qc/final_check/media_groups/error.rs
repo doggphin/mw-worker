@@ -1,4 +1,4 @@
-use crate::utils::types::{media_types::{photo_media_data::error::PhotoMediaDataError, MediaType}, scan_type::ScanType};
+use crate::utils::types::{media_types::MediaType, scan_type::ScanType};
 
 #[derive(Debug)]
 pub enum MediaGroupsError {

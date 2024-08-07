@@ -3,7 +3,7 @@ use media_folder::MediaFolder;
 use serde_json::Value;
 use serde::Deserialize;
 use glob::{glob, Paths};
-use crate::FilesWs;
+use crate::WorkerWs;
 
 pub mod media_file;
 pub mod media_folder;
@@ -25,18 +25,16 @@ struct Data {
 }
 
 
-pub fn final_check(dir: String, request_json: Value, ctx: &mut<FilesWs as Actor>::Context) -> std::result::Result<(), FCError> {
+pub fn final_check(dir: String, request_json: Value, _ctx: &mut<WorkerWs as Actor>::Context) -> std::result::Result<(), FCError> {
     let final_check_req = parse_final_check_request(request_json)?;
 
     let pattern = build_directory_pattern(&dir, &final_check_req)?;
-    
     let files = glob(&*pattern).map_err(|e| FCError::InvalidDirectory(e))?;
     let media_files = parse_media_files(files)?;
     if media_files.len() == 0 {
         return Err(FCError::NoFilesInDirectory(pattern));
     }
     let counted_media_groups: MediaGroupValues = MediaGroupValues::from_media_files(&media_files).map_err(|e| FCError::MediaGroupingError(e))?;
-
     let media_folder = MediaFolder { files: media_files, group_options: counted_media_groups };
     media_folder.group_options.counts_equal(final_check_req.media_group_values).map_err(|e| FCError::IncorrectMediaCount(e))?;
 
@@ -62,6 +60,7 @@ fn build_directory_pattern(dir: &String, final_check_request: &FinalCheckRequest
 fn parse_final_check_request(request_json: Value) -> std::result::Result<FinalCheckRequest, FCError> {
     let data = serde_json::from_value::<Data>(request_json).map_err(|e| FCError::DeserializeError(e))?;
     let data = data.data;
+
     if data.media_group_values.slides.is_none() && data.media_group_values.negatives.is_none() && data.media_group_values.prints.is_none() {
         return Err(FCError::InvalidRequest("no properties were defined in request for expecting_media".to_string()));
     }
