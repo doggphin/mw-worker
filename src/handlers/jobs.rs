@@ -1,7 +1,7 @@
 use actix::Actor;
 use serde::Deserialize;
 use serde_json::Value;
-use crate::{qc::final_check, utils::send_text, WorkerWs};
+use crate::{qc::final_check, utils::send_text::{self, WsStatus}, WorkerWs};
 
 mod error;
 use error::ServicesError;
@@ -17,19 +17,16 @@ pub fn service_router(request: String, ctx: &mut<WorkerWs as Actor>::Context) ->
     let job_request = parse_base_job(&json).map_err(|_| ServicesError::InvalidJob(None))?;
     return match &*job_request.job {
         "final_check" => {
-            send_text::status("busy", ctx);
-            send_text::msg("Starting final check!", ctx);
+            send_text::send("Starting final check!", Some(WsStatus::Busy), ctx);
             println!("Starting final check!");
             match final_check::final_check(job_request.dir, json.clone(), ctx) {
                 Ok(_) => {
-                    send_text::msg("Final check successful!", ctx);
-                    send_text::status("success", ctx);
+                    send_text::send("Final check successful!", Some(WsStatus::Success), ctx);
                     println!("Final check successful!");
                     Ok(())
                 }
                 Err(e) => {
-                    send_text::msg("Final check unsuccessful!", ctx);
-                    send_text::status("failure", ctx);
+                    send_text::send(&*format!("Final check unsuccessful: {e}"), Some(WsStatus::Failure), ctx);
                     println!("Error with final check: {e}");
                     Err(ServicesError::InvalidFinalCheck(e.to_string()))
                 }

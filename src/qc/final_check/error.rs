@@ -7,9 +7,9 @@ use super::{media_file::{error::MediaFileParseError, MediaFile}, media_groups::e
 #[derive(Debug)]
 pub enum FCError {
     DeserializeError(serde_json::Error),
+    InvalidRequest(String),
     InsufficientGroupNumberPrecision(u64, u64),
     GroupNumberPrecisionTooHigh(u64),
-    InvalidRequest(String),
     InvalidDirectory(PatternError),
     NoFilesInDirectory(String),
     InvalidFile(GlobError),

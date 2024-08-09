@@ -8,7 +8,7 @@ mod handlers;
 use handlers::jobs;
 mod qc;
 mod utils;
-use utils::send_text;
+use utils::send_text::{self, WsStatus};
 
 struct WorkerWs;
 impl Actor for WorkerWs {
@@ -20,9 +20,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorkerWs {
             Ok(ws::Message::Text(text)) => {
                 print!("Received a message:\n{}\n", text);
                 let _ = jobs::service_router(text.to_string(), ctx);
-                /*if let Err(e) = jobs::service_router(text.to_string(), ctx) {
-                    ctx.close(Some(ws::CloseReason { code: ws::CloseCode::Error, description: Some(e.to_string()) } ))
-                }*/
             }
             Ok(ws::Message::Close(close_reason)) => {
                 println!("Received a close message!");
@@ -37,7 +34,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorkerWs {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("Opened a socket!");
-        send_text::msg("Connected to a worker!", ctx);
+        send_text::send("Connected to a worker!", Some(WsStatus::Success), ctx);
     }
 
     fn finished(&mut self, _ctx: &mut Self::Context) {
