@@ -37,6 +37,7 @@ impl PhotoMediaData {
             if software.contains("photoshop") {
                 is_corrected = true;
             }
+            println!("{is_corrected}");
         }
 
         // Get hardware used to capture

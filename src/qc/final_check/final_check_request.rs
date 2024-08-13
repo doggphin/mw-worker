@@ -36,7 +36,10 @@ impl FinalCheckRequest {
                     }
                 }
                 if photo_group_options.is_corrected && !photo_data.is_corrected {
+                    println!("Should be corrected!");
                     return Err(FCError::NotCorrected(media_file.clone()))
+                } else {
+                    println!("Shouldn't be corrected!");
                 }
             } else {
                 return Err(FCError::OutOfPlaceMediaType(media_file.media_type.clone()))
