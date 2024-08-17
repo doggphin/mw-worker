@@ -5,10 +5,11 @@ use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws::{self};
 
 mod handlers;
-use handlers::jobs;
 mod qc;
 mod utils;
+mod autocorr;
 use utils::send_text::{self, WsStatus};
+use handlers::jobs;
 
 struct WorkerWs;
 impl Actor for WorkerWs {

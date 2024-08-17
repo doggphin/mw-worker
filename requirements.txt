@@ -1,0 +1,2 @@
+comtypes==1.4.6
+photoshop-python-api==0.22.4

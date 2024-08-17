@@ -18,21 +18,22 @@ pub fn service_router(request: String, ctx: &mut<WorkerWs as Actor>::Context) ->
     return match &*job_request.job {
         "final_check" => {
             send_text::send("Starting final check!", Some(WsStatus::Busy), ctx);
-            println!("Starting final check!");
             match final_check::final_check(job_request.dir, json.clone(), ctx) {
                 Ok(_) => {
                     send_text::send("Final check successful!", Some(WsStatus::Success), ctx);
-                    println!("Final check successful!");
                     Ok(())
                 }
                 Err(e) => {
                     send_text::send(&*format!("Final check unsuccessful: {e}"), Some(WsStatus::Failure), ctx);
-                    println!("Error with final check: {e}");
                     Err(ServicesError::InvalidFinalCheck(e.to_string()))
                 }
             }
         },
-        "check_is_corrected" => Ok(()),
+        "correct_slides" => {
+            send_text::send("Starting slides correction!", Some(WsStatus::Busy), ctx);
+            
+            Ok(())
+        },
         _ => Err(ServicesError::InvalidJob(Some(String::from("Invalid job type specified in request!"))))
     }
 }
